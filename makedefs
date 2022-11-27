@@ -3,4 +3,4 @@ P = B07
 V = 1
 A = Tocknell
 E = james.tocknell@mq.edu.au
-#FIGS = B07_*.eps
+FIGS = B07_*.eps
