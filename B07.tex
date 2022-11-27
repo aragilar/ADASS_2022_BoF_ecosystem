@@ -15,7 +15,7 @@
 
 \bibliographystyle{asp2014}
 
-\markboth{Tocknell et. al.}{Ensuring continuing trust in our numerical ecosystem}
+\markboth{Tocknell and Lorente}{Ensuring continuing trust in our numerical ecosystem}
 % remove/add as you need
 
 \begin{document}
@@ -23,14 +23,18 @@
 \title{Ensuring continuing trust in our numerical ecosystem}
 
 % full name: James Tocknell
-\author{James~Tocknell$^1$ and Sample~Author2$^2$}
-\affil{$^1$, Institution City, State/Province, Country; \email{james.tocknell@mq.edu.au}}
-\affil{$^2$Institution Name, Institution City, State/Province, Country}
+\author{James~Tocknell$^1$ and Nuria~Lorente$^1$}
+\affil{$^1$Australian Astronomical Optics - Macquarie, Faculty of Science and
+Engineering, Macquarie University, North Ryde, NSW 2113, Australia; \email{james.tocknell@mq.edu.au}}
 % remove/add as you need
 
 % remove/add authors as you need
-\paperauthor{James~Tocknell}{james.tocknell@mq.edu.au}{ORCID}{}{Author1 Department}{City}{State/Province}{Postal Code}{Country}
-\paperauthor{Sample~Author2}{Author2Email@email.edu}{ORCID_Or_Blank}{Author2 Institution}{Author2 Department}{City}{State/Province}{Postal Code}{Country}
+\paperauthor{James~Tocknell}{james.tocknell@mq.edu.au}{0000-0001-6637-6922}{}{Australian
+  Astronomical Optics - Macquarie, Faculty of Science and Engineering, Macquarie
+  University}{North Ryde}{NSW}{2113}{Australia}
+\paperauthor{Nuria~Lorente}{nuria.lorente@mq.edu.au}{0000-0003-0450-4807}{}{Australian
+  Astronomical Optics - Macquarie, Faculty of Science and Engineering, Macquarie
+  University}{North Ryde}{NSW}{2113}{Australia}
 % remove/add as you need
 
 % leave these next few aindex lines commented for the editors to enable them. Use Aindex.py to generate them for yourself.
@@ -48,68 +52,155 @@
   
 \begin{abstract}
 
-Many of the tools we develop build depend on core numerical libraries such as FFTW, or more generally ecosystems such as those from netlib or scipy. Whilst in many cases these core libraries are well regarded and used, the need to either run tools in new environments (such as client-side in a web browser or on a mobile device), or with the rise of new challengers to the current Fortran/C/C++ ecosystem, such as Rust, Julia or possibly even Go, means that either these libraries are being ported, or new libraries being written wholesale. This BoF aims to start the conversation around what we can do to ensure these new libraries are trustworthy, by firstly covering some of the experience of the BoF organisers, and then opening up a wider discussion.
-  
+Many of the tools we develop build depend on core numerical libraries such as
+FFTW, or more generally ecosystems such as those from netlib or scipy. Whilst in
+many cases these core libraries are well regarded and used, the need to either
+run tools in new environments (such as client-side in a web browser or on a
+mobile device), or with the rise of new challengers to the current Fortran/C/C++
+ecosystem, such as Rust, Julia or possibly even Go, means that either these
+libraries are being ported, or new libraries being written wholesale. This BoF
+aims to start the conversation around what we can do to ensure these new
+libraries are trustworthy, by firstly covering some of the experience of the BoF
+organisers, and then opening up a wider discussion.
+
 \end{abstract}
 
-\section{Introduction}
+\section{Motivation}
+The catalyst for this Birds of a Feather session was one of the authors needing
+to integrate the automatic redshift determination of MARZ
+\citep{2016ascl.soft05001H} into an existing Python web application. In an
+attempt to keep the Python web application maintainable, the MARZ redshifting
+algorithm was ported to Python, with the existing tests that came with MARZ used
+to validate the code. Differences in the output of the different implementations
+soon became apparent, which were isolated to two of MARZ's dependencies:
+\texttt{DSP.js} and \texttt{Regression.js}. These libraries produced incorrect
+output,\footnote{We plan to present a detailed look at the process of discovery
+at a future ADASS, but the plot in fig.~\ref{B07_f1.eps} provides a taste of the
+issues with these libraries.} and so the issue was raised of how do we, as the
+Research Software Engineers of the astronomy community, ensure that our software
+ecosystem remains trustworthy.
 
-Your abstract currently has 755 characters. For more than 1000
-it's possibly too long. Just sayin' Since this paper was written by
-some python code, ignore that warning, since you will edit most of
-this rubbish away for your final version.
+\articlefigure{B07_f1.eps}{B07_f1}{A plot of the different stages of the MARZ
+  code to a flat line with two peaks (one of the provided test cases). Note the
+  introduction of artefacts and their further propagation through the pipeline.}
 
-Test cite \citep{2016ascl.soft05001H}
+\section{Issues seen by participants}
+The BoF started with James Tocknell providing a overview of the issues with
+MARZ, but also the example of numerically solving a Cubic equation: using the
+algorithm given in \citet{1992nrfa.book.....P} gave fairly inaccurate results,
+whereas using an algorithm from William Kahan (of IEEE 754 fame) gives accurate
+results down to numerical precision.\footnote{The algorithm used is detailed in
+  \url{https://people.eecs.berkeley.edu/~wkahan/Math128/Cubic.pdf}, which seems
+  to be from a course that was taught.}.
+
+Another case study given was the use of the various versions of the code knows
+as \texttt{mpfit}, as it has been converted and upgraded for various programming
+languages, with various undocumented modifications along the way. The absence of
+a clear provenance, along with the tendency of the code to be
+\emph{vendored}\footnote{the process of copying wholesale a codebase into
+  another codebase, sometimes with additional modifications} by its users,
+implies even if the use of \texttt{mpfit} is documented, the code may not be
+behaving correctly.
+
+From this, four key issues were presented:
+\begin{itemize}
+  \item Where we find algorithms (e.g. papers, textbooks, wikipedia!)?
+  \item Where we find implementations of these algorithms?
+  \item How we check these implementations are correct?
+  \item How we ensure the community uses these correct implementations, not
+    incorrect ones?
+\end{itemize}
+
+Participants then raised some addition issues:
+\begin{itemize}
+  \item How can we trust and/or fix closed source codebases such as MATLAB?
+  \item How can we handle issues in hardware, as hardware is not immune to these
+    issues?
+  \item Can a result be considered reproducible if the software used
+    to derive it is not available for inspection, and should a distinction be
+    made between publishing software for reuse verses publishing software for
+    reproducibility?
+\end{itemize}
+
+\section{Possible solutions to those issues}
+From this starting point, numerous solutions and variations on them were
+proposed. A reasonable way of classifying these solutions is by who is
+performing them (e.g. code developers, paper authors, journal editors) and to
+which codebases the solutions are applied to (e.g. a singular codebase, unrelated
+codebases in a single field, unrelated codebases used by an organisation).
+
+One idea that came up in various forms was comparison between codebases solving
+a similar problem. These included:
+\begin{itemize}
+  \item papers where codebases produced results based on a set of benchmarks, with fluid dynamic shocks and dust radiative transfer given as examples of benchmarks
+  \item comparisons against a reference or canonical code, with SPICE
+    \citep{1996P&SS...44...65A,2018P&SS..150....9A} given as an
+    example of where this takes place.
+  \item the use of data challenges or competitions, e.g. those run by Kaggle—it
+    was suggested one of these could happen at a future ADASS.
+  \item the use of a development codebase for experiments and a separate production
+    codebase for performance
+  \item the use of a different package's test suite
+  \item the development of a separate (simpler) codebase which validates more
+    complex ones
+\end{itemize}
+
+Another set of ideas were around the publication and documentation process.
+These included:
+\begin{itemize}
+  \item citation of the specific algorithm used, and if derived from a different
+    codebase, citation of that codebase as well. Scipy
+    \citep{2020NatMe..17..261V} was given as an example of a package which does
+    this well.
+  \item the use of tags for algorithms to aid discovery
+  \item the requirement to publish code associated with the paper
+  \item the sharing of results of testing codebases by large organisations e.g.
+    STScI
+  \item detailed information around any limitations of the code, and what the
+    target use-cases of the codebase are.  Approximations or speedups which may
+    affect precision could be acceptable in parts designed for
+    visualisation/sonification/etc. but not for data reduction or analysis.
+\end{itemize}
+
+Two community resources were repeatedly brought up: the Astrophysics Source Code
+Library (ASCL; \citet{2020ASPC..522..731A}) and the Journal of Open Source
+Software (JOSS; ISSN 2475-9066). ASCL is catalogue of codebases used in the
+astronomical literature, providing a citable reference where no other exists.
+There is no measurement or judgement of quality, nor is the codebase run or
+tested, rather it aims to avoid stereotype threat by acknowledging the variable
+quality of code produced in research by indexing any codebase used in the
+astronomical literature. JOSS complements ASCL by being a journal whose purpose
+is to review the quality of the codebase associated with a summary paper, and
+thereby improve the quality of scientific codebases.\footnote{One of the authors
+  has had two papers published through JOSS, and found it to be a valuable
+  experience, and would encourage others to submit their codes to JOSS}
+
+Testing was brought up numerous times (and further discussion of testing
+continued in the Testing BoF \citep{B___adassxxxii}). Ideas around testing not already
+mentioned included:
+\begin{itemize}
+  \item the development of a database of tests for specific algorithms
+  \item the use of more comprehensive regression test suites
+  \item the wider use of property-based testing and fuzzing
+\end{itemize}
+
+One final solution that was raised was restrictions around the codebase (either
+via licensing or via limiting access to the code to approved people) to prevent
+misuse (as has been done by codebases such as pPXF \citep{2017MNRAS.466..798C}).
+This approach was views poorly by participants given the unnecessary barriers
+created to compare such codes with other codes.
+
+\section{Where next}
+The authors expect the discussions around testing to continue to the next ADASS
+and beyond, and that the further publication of codebases via the ASCL and JOSS
+to be of great benefit to the astronomical community. Adding some kind of
+competition or hackathon to ADASS sounds like an excellent idea, but will need
+effort from both the hosts (in order to have a viable space for it to take place
+in), but also volunteers to run the event.
 
 
-\section{This Template}
-
-To use this 2020 personalized template instead of the {\tt
-  ADASS\_template}, copy this file (named something like C01.tex,
-P12.tex, B4.tex, F03.tex, T01.tex, or I06.tex) in your local {\tt
-  ADASS2020\_author\_template} directory (where you also find the
-asp2014.sty, the Makefile etc).  Edit the macros in the {\tt makedefs}
-file, and run ``{\tt make}'' and hope for the best.  If that runs into
-trouble, check if your version of latex uses a different calling
-sequence.  Some instructions are in the Makefile. When you send your
-tar file, it's useful to send the {\tt makedefs} file along.
-
-\section{Any Figures?}
-
-This template has no figures. Look for the larger template and
-Makefile how to do this. But most importantly, your figures need to
-be EPS files, and their names should be B07\_f1.eps ,
-B07\_f2.eps  etc.
-
-\section{Any Tables?}
-
-This template has no tables. Look for the larger template
-how to do this. 
-
-\section{Final Check}
-
-Please use ``{\tt make check}'' (which runs {\tt PaperCheck.py}) to
-check if you can make life for the ADASS editors a little
-easier. Pretty Please.
-
-After this ``{\tt make tar}'' will create the correct archive to be sent to
-the editors. zip files also work.
-
-\section{Any Photographs?}
-
-If your paper has enough room at the end, the editors may decide to use this
-for a conference photograph.
-
-\section{Summary}
-
-This template has no bibtex file.  Look for the larger template and
-Makefile how to do this. By default the {\tt Makefile} will create an
-empty B07.bib. When you add references to this, uncomment the
-line \verb+\bibliography+ below, use ``{\tt make pdf}'' to create
-your beautifully looking PDF. Only use the
-\verb"\citet" and \verb"\citep" macros!
-
-% For example in \citet{PID_adassxxx} it was shown that ...
+\acknowledgments The authors would like to thank everyone who participated in
+the session, both on zoom via video/audio, and on the session chat.
 
 
 \bibliography{B07}
